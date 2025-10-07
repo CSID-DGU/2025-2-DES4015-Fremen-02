@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
             IACE2_FrontendTheme {
                 var showSplash by remember { mutableStateOf(true) }
                 var showLogin by remember { mutableStateOf(false) }
+                var showSettings by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     delay(1500)
@@ -43,8 +45,12 @@ class MainActivity : ComponentActivity() {
                     showLogin -> LoginScreen(
                         onBackClick = { showLogin = false }
                     )
+                    showSettings -> SettingsScreen(
+                        onBackClick = { showSettings = false }
+                    )
                     else -> HomeScreen(
-                        onLoginClick = { showLogin = true }
+                        onLoginClick = { showLogin = true },
+                        onSettingsClick = { showSettings = true }
                     )
                 }
             }
@@ -87,7 +93,7 @@ fun SplashScreen() {
 }
 
 @Composable
-fun HomeScreen(onLoginClick: () -> Unit) {
+fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -121,7 +127,7 @@ fun HomeScreen(onLoginClick: () -> Unit) {
                         fontSize = 16.sp
                     )
                 }
-                IconButton(onClick = { /* 설정 */ }) {
+                IconButton(onClick = onSettingsClick) {
                     Icon(
                         painter = painterResource(id = R.drawable.settings),
                         contentDescription = "Settings",
@@ -452,11 +458,155 @@ fun LoginScreen(onBackClick: () -> Unit) {
     }
 }
 
+@Composable
+fun SettingsScreen(onBackClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1E1E1E))
+    ) {
+        // 상단 바
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .align(Alignment.TopCenter),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back 버튼
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    painter = painterResource(id = R.drawable.back),
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            // 설정 텍스트 (중앙)
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "설정",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            
+            // 오른쪽 공간 균형
+            Spacer(modifier = Modifier.size(48.dp))
+        }
+        
+        // 설정 메뉴 목록
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 80.dp)
+        ) {
+            // 기본 정보
+            SettingsMenuItem(
+                icon = R.drawable.account_circle,
+                title = "기본 정보",
+                iconTint = Color.White,
+                onClick = { /* TODO */ }
+            )
+            
+            HorizontalDivider(
+                color = Color(0xFF2A2A2A),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            
+            // 알림 설정
+            SettingsMenuItem(
+                icon = R.drawable.notifications,
+                title = "알림 설정",
+                iconTint = Color.White,
+                onClick = { /* TODO */ }
+            )
+            
+            HorizontalDivider(
+                color = Color(0xFF2A2A2A),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            
+            // 로그아웃
+            SettingsMenuItem(
+                icon = R.drawable.send,
+                title = "로그아웃",
+                iconTint = Color(0xFFFFB74D),
+                textColor = Color(0xFFF7B526),
+                onClick = { /* TODO */ }
+            )
+            
+            HorizontalDivider(
+                color = Color(0xFF2A2A2A),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            
+            // 회원 탈퇴
+            SettingsMenuItem(
+                icon = R.drawable.phone_link,
+                title = "회원 탈퇴",
+                iconTint = Color(0xFFFF6B9D),
+                textColor = Color(0xFFF35686),
+                onClick = { /* TODO */ }
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsMenuItem(
+    icon: Int,
+    title: String,
+    iconTint: Color,
+    textColor: Color = Color.White,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 왼쪽 아이콘
+        Icon(
+            painter = painterResource(id = icon),
+            contentDescription = title,
+            tint = iconTint,
+            modifier = Modifier.size(28.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(20.dp))
+        
+        // 제목
+        Text(
+            text = title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = textColor,
+            modifier = Modifier.weight(1f)
+        )
+        
+        // 오른쪽 화살표
+        Icon(
+            painter = painterResource(id = R.drawable.next),
+            contentDescription = "Next",
+            tint = Color.Gray,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     IACE2_FrontendTheme {
-        HomeScreen(onLoginClick = {})
+        HomeScreen(onLoginClick = {}, onSettingsClick = {})
     }
 }
 
@@ -465,5 +615,13 @@ fun HomeScreenPreview() {
 fun LoginScreenPreview() {
     IACE2_FrontendTheme {
         LoginScreen(onBackClick = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    IACE2_FrontendTheme {
+        SettingsScreen(onBackClick = {})
     }
 }
