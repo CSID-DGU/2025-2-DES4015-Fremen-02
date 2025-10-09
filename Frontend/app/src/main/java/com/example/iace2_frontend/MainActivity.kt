@@ -335,12 +335,23 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.forward),
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp)
-                )
+                if (hasClipboardText) {
+                    // 클립보드에 텍스트가 있을 때 - paste 아이콘
+                    Icon(
+                        painter = painterResource(id = R.drawable.paste),
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    // 클립보드가 비어있을 때 - forward 아이콘
+                    Icon(
+                        painter = painterResource(id = R.drawable.forward),
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (hasClipboardText) "메세지 붙여넣기" else "메세지함 바로가기",
