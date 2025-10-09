@@ -123,13 +123,13 @@ fun SplashScreen() {
 
 @Composable
 fun HomeScreen(
-    isLoggedIn: Boolean,
-    userName: String?,
-    onLoginClick: () -> Unit, 
-    onSettingsClick: () -> Unit,
-    onAnalyzeMessage: (String) -> Unit
+    isLoggedIn: Boolean, // 로그인 상태 여부
+    userName: String?, // 로그인된 유저 이름
+    onLoginClick: () -> Unit,  // 로그인 버튼 눌렀을 시 동작
+    onSettingsClick: () -> Unit, // 설정 버튼 눌렀을 시 동작
+    onAnalyzeMessage: (String) -> Unit // 클립보드 텍스트를 분석할 때 호출
 ) {
-    val context = LocalContext.current
+    val context = LocalContext.current // 현재 안드로이드 context가져옴
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     
     // 클립보드에 텍스트가 있는지 확인
@@ -838,7 +838,7 @@ fun AnalysisScreen(message: String, onBackClick: () -> Unit) {
                     }
                 }
             } else {
-                analysisResult?.let { result ->
+                analysisResult?.let     { result ->
                     AnalysisResultCard(result = result)
                 }
             }
@@ -892,8 +892,8 @@ fun AnalysisResultCard(result: AnalysisResult) {
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 320.dp)
-                .background(
+                .widthIn(max = 320.dp) // 카드 최대 폭 제한
+                .background( // 카드 배경 색 + 모서리 둥글게
                     color = Color(0xFF2A2A2A),
                     shape = RoundedCornerShape(
                         topStart = 4.dp,
@@ -902,12 +902,12 @@ fun AnalysisResultCard(result: AnalysisResult) {
                         bottomEnd = 16.dp
                     )
                 )
-                .padding(20.dp)
+                .padding(20.dp) // 카드 내부의 여백 설정
         ) {
             // 체크 아이콘과 결과 텍스트
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
+                verticalAlignment = Alignment.CenterVertically, // 아이콘와 텍스트를 세로로 가운데 맞추기
+                modifier = Modifier.padding(bottom = 16.dp) // 아래쪽 여백을 두어 다음 텍스트와 간격 확보
             ) {
                 Icon(
                     painter = painterResource(id = if (result.isSmishing) R.drawable.forward else R.drawable.forward),
@@ -1005,7 +1005,17 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-@Preview(showBackground = true)
+// ============== Preview 모음 ==============
+
+@Preview(showBackground = true, name = "스플래시 화면")
+@Composable
+fun SplashScreenPreview() {
+    IACE2_FrontendTheme {
+        SplashScreen()
+    }
+}
+
+@Preview(showBackground = true, name = "홈 화면 - 비로그인")
 @Composable
 fun HomeScreenPreview() {
     IACE2_FrontendTheme {
@@ -1019,7 +1029,21 @@ fun HomeScreenPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "홈 화면 - 로그인")
+@Composable
+fun HomeScreenLoggedInPreview() {
+    IACE2_FrontendTheme {
+        HomeScreen(
+            isLoggedIn = true,
+            userName = "조효동님",
+            onLoginClick = {},
+            onSettingsClick = {},
+            onAnalyzeMessage = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "로그인 화면")
 @Composable
 fun LoginScreenPreview() {
     IACE2_FrontendTheme {
@@ -1027,10 +1051,114 @@ fun LoginScreenPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "설정 화면")
 @Composable
 fun SettingsScreenPreview() {
     IACE2_FrontendTheme {
         SettingsScreen(onBackClick = {})
+    }
+}
+
+@Preview(showBackground = true, name = "분석 화면 - 정상")
+@Composable
+fun AnalysisScreenPreview() {
+    IACE2_FrontendTheme {
+        AnalysisScreen(
+            message = "[Web발신]\n(광고)[KB국민카드] 데이터 분석 부트캠프\n\n최대 170만원 지원금과 인턴십 기회까지, 데이터 분석 부트캠프",
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "메시지 말풍선 - 사용자")
+@Composable
+fun MessageBubblePreview() {
+    IACE2_FrontendTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E1E1E))
+                .padding(16.dp)
+        ) {
+            MessageBubble(
+                message = "[Web발신]\n(광고)[KB국민카드] 데이터 분석 부트캠프\n\n최대 170만원 지원금과 인턴십 기회까지"
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "분석 결과 카드 - 정상")
+@Composable
+fun AnalysisResultCardPreview() {
+    IACE2_FrontendTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E1E1E))
+                .padding(16.dp)
+        ) {
+            AnalysisResultCard(
+                result = AnalysisResult(
+                    isSmishing = false,
+                    confidence = "높아요",
+                    sender = "KB국민카드 공식 번호 확인됨",
+                    content = "개인정보 요구-위험 문구 없음",
+                    links = "KB국민카드 공식 도메인 검증 완료",
+                    category = "합법적인 광고/홍보성 문자로 분류되었습니다."
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "분석 결과 카드 - 위험")
+@Composable
+fun AnalysisResultCardDangerPreview() {
+    IACE2_FrontendTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E1E1E))
+                .padding(16.dp)
+        ) {
+            AnalysisResultCard(
+                result = AnalysisResult(
+                    isSmishing = true,
+                    confidence = "매우 높아요",
+                    sender = "미등록 번호로 확인됨",
+                    content = "개인정보 요구-위험 문구 포함",
+                    links = "의심스러운 도메인 감지",
+                    category = "스미싱 문자로 분류되었습니다. 절대 링크를 클릭하지 마세요!"
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "설정 메뉴 아이템")
+@Composable
+fun SettingsMenuItemPreview() {
+    IACE2_FrontendTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1E1E1E))
+        ) {
+            Column {
+                SettingsMenuItem(
+                    icon = R.drawable.account_circle,
+                    title = "기본 정보",
+                    iconTint = Color.White,
+                    onClick = {}
+                )
+                SettingsMenuItem(
+                    icon = R.drawable.send,
+                    title = "로그아웃",
+                    iconTint = Color(0xFFFFB74D),
+                    textColor = Color(0xFFF7B526),
+                    onClick = {}
+                )
+            }
+        }
     }
 }
