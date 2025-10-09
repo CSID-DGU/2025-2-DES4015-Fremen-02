@@ -1,5 +1,7 @@
 package com.example.iace2_frontend
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,7 +9,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,6 +39,12 @@ class MainActivity : ComponentActivity() {
                 var showSplash by remember { mutableStateOf(true) }
                 var showLogin by remember { mutableStateOf(false) }
                 var showSettings by remember { mutableStateOf(false) }
+                var showAnalysis by remember { mutableStateOf(false) }
+                var messageToAnalyze by remember { mutableStateOf<String?>(null) }
+                
+                // 로그인 상태 관리
+                var isLoggedIn by remember { mutableStateOf(false) }
+                var userName by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
                     delay(1500)
@@ -43,14 +54,32 @@ class MainActivity : ComponentActivity() {
                 when {
                     showSplash -> SplashScreen()
                     showLogin -> LoginScreen(
-                        onBackClick = { showLogin = false }
+                        onBackClick = { showLogin = false },
+                        onLoginSuccess = { name ->
+                            userName = name
+                            isLoggedIn = true
+                            showLogin = false
+                        }
                     )
                     showSettings -> SettingsScreen(
                         onBackClick = { showSettings = false }
                     )
+                    showAnalysis && messageToAnalyze != null -> AnalysisScreen(
+                        message = messageToAnalyze!!,
+                        onBackClick = { 
+                            showAnalysis = false
+                            messageToAnalyze = null
+                        }
+                    )
                     else -> HomeScreen(
+                        isLoggedIn = isLoggedIn,
+                        userName = userName,
                         onLoginClick = { showLogin = true },
-                        onSettingsClick = { showSettings = true }
+                        onSettingsClick = { showSettings = true },
+                        onAnalyzeMessage = { message ->
+                            messageToAnalyze = message
+                            showAnalysis = true
+                        }
                     )
                 }
             }
@@ -93,7 +122,32 @@ fun SplashScreen() {
 }
 
 @Composable
-fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
+fun HomeScreen(
+    isLoggedIn: Boolean,
+    userName: String?,
+    onLoginClick: () -> Unit, 
+    onSettingsClick: () -> Unit,
+    onAnalyzeMessage: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    
+    // 클립보드에 텍스트가 있는지 확인
+    val hasClipboardText = clipboardManager.hasPrimaryClip() && 
+                          clipboardManager.primaryClipDescription?.hasMimeType("text/plain") == true
+    
+    // 클립보드에서 텍스트 가져오기 함수
+    fun pasteFromClipboard() {
+        clipboardManager.primaryClip?.let { clip ->
+            if (clip.itemCount > 0) {
+                val text = clip.getItemAt(0).text?.toString()
+                if (!text.isNullOrEmpty()) {
+                    onAnalyzeMessage(text)
+                }
+            }
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -120,12 +174,23 @@ fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onLoginClick) {
+                if (isLoggedIn && userName != null) {
+                    // 로그인 상태 - 사용자 이름 표시
                     Text(
-                        text = "Login",
-                        color = Color.Gray,
-                        fontSize = 16.sp
+                        text = userName,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
                     )
+                } else {
+                    // 비로그인 상태 - Login 버튼
+                    TextButton(onClick = onLoginClick) {
+                        Text(
+                            text = "Login",
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
                 IconButton(onClick = onSettingsClick) {
                     Icon(
@@ -137,65 +202,126 @@ fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
             }
         }
 
-        // 중앙 컨텐츠
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopStart) // 왼쪽 위 정렬
-                .padding(start = 60.dp, top = 140.dp), // 화면 위쪽, 왼쪽 여백
-            horizontalAlignment = Alignment.Start // 내부 요소는 왼쪽 정렬
-        ) {
-            // Paste 아이콘
-            Image(
-                painter = painterResource(id = R.drawable.paste),
-                contentDescription = "Paste",
-                contentScale = ContentScale.Fit,
+        // 중앙 컨텐츠 - 클립보드 상태에 따라 다르게 표시
+        if (hasClipboardText) {
+            // 클립보드에 텍스트가 있을 때
+            Column(
                 modifier = Modifier
-                    .size(38.dp)
-                    .offset(x=(-16).dp)
-            )
-
-            Spacer(modifier = Modifier.height(0.dp))
-
-            // “붙여넣을 수 있는...” 텍스트
-            Text(
-                text = "붙여넣을 수 있는\n메시지가 없어요",
-                fontSize = 18.sp,
-                lineHeight = 27.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                textAlign = TextAlign.Start // 왼쪽 정렬 유지
-            )
-
-            Spacer(modifier = Modifier.height(13.dp)) // 아래 회색 박스와 간격
-
-            // 경고 텍스트 박스
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .background(
-                        color = Color(0xFF1E1E1E),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+                    .padding(start = 60.dp, top = 140.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                Text(
-                    text = "메세지에 포함된 링크는 절대 클릭하지 말고,\n복사 시 잘못 누르지 않도록 유의해주세요.",
-                    fontSize = 11.sp,
-                    lineHeight = 16.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                // Doubt 아이콘
+                Image(
+                    painter = painterResource(id = R.drawable.doubt),
+                    contentDescription = "Doubt",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .offset(x = (-16).dp)
                 )
-            }
 
+                Spacer(modifier = Modifier.height(0.dp))
+
+                // "의심스러운 문자를..." 텍스트
+                Text(
+                    text = "의심스러운 문자를\n받으셨나요?",
+                    fontSize = 18.sp,
+                    lineHeight = 27.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    textAlign = TextAlign.Start
+                )
+
+                Spacer(modifier = Modifier.height(13.dp))
+
+                // 경고 텍스트 박스
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .background(
+                            color = Color(0xFF2A2A2A),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "메세지 붙여넣기 시 민감한 개인정보가\n포함되지 않도록 유의해주세요.",
+                        fontSize = 11.sp,
+                        lineHeight = 16.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
+        } else {
+            // 클립보드에 텍스트가 없을 때
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+                    .padding(start = 60.dp, top = 140.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                // Paste 아이콘
+                Image(
+                    painter = painterResource(id = R.drawable.paste),
+                    contentDescription = "Paste",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .offset(x = (-16).dp)
+                )
+
+                Spacer(modifier = Modifier.height(0.dp))
+
+                // "붙여넣을 수 있는..." 텍스트
+                Text(
+                    text = "붙여넣을 수 있는\n메시지가 없어요",
+                    fontSize = 18.sp,
+                    lineHeight = 27.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    textAlign = TextAlign.Start
+                )
+
+                Spacer(modifier = Modifier.height(13.dp))
+
+                // 경고 텍스트 박스
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .background(
+                            color = Color(0xFF2A2A2A),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "메세지에 포함된 링크는 절대 클릭하지 말고,\n복사 시 잘못 누르지 않도록 유의해주세요.",
+                        fontSize = 11.sp,
+                        lineHeight = 16.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
         }
 
-        // "메세지함 바로가기" 버튼 - 전체 화면 기준 중앙 배치
+        // 버튼 - 클립보드 상태에 따라 다르게 표시
         Button(
-            onClick = { /* TODO */ },
+            onClick = {
+                if (hasClipboardText) {
+                    pasteFromClipboard()
+                } else {
+                    // TODO: 메세지함으로 이동
+                }
+            },
             modifier = Modifier
-                .width(175.dp)
+                .width(if (hasClipboardText) 150.dp else 175.dp)
                 .height(38.dp)
                 .align(Alignment.Center)
                 .offset(y = -100.dp), // 중앙에서 위치조절
@@ -217,7 +343,7 @@ fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "메세지함 바로가기",
+                    text = if (hasClipboardText) "메세지 붙여넣기" else "메세지함 바로가기",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black
@@ -265,7 +391,7 @@ fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
                 )
             }
             
-            Column(
+    Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
@@ -285,7 +411,10 @@ fun HomeScreen(onLoginClick: () -> Unit, onSettingsClick: () -> Unit) {
 }
 
 @Composable
-fun LoginScreen(onBackClick: () -> Unit) {
+fun LoginScreen(
+    onBackClick: () -> Unit,
+    onLoginSuccess: (String) -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -331,7 +460,7 @@ fun LoginScreen(onBackClick: () -> Unit) {
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(top = 120.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 상단 sentinel 텍스트
             Text(
@@ -361,7 +490,11 @@ fun LoginScreen(onBackClick: () -> Unit) {
         ) {
             // 카카오 로그인
             Button(
-                onClick = { /* TODO: 카카오 로그인 */ },
+                onClick = { 
+                    // TODO: 실제 카카오 로그인 API 연동
+                    // 현재는 더미 데이터로 로그인
+                    onLoginSuccess("조효동님")
+                },
                 modifier = Modifier
                     .width(280.dp)
                     .height(50.dp)
@@ -602,11 +735,287 @@ fun SettingsMenuItem(
     }
 }
 
+// 분석 결과 데이터 모델
+data class AnalysisResult(
+    val isSmishing: Boolean,
+    val confidence: String,
+    val sender: String?,
+    val content: String?,
+    val links: String?,
+    val category: String?
+)
+
+@Composable
+fun AnalysisScreen(message: String, onBackClick: () -> Unit) {
+    var isAnalyzing by remember { mutableStateOf(true) }
+    var analysisResult by remember { mutableStateOf<AnalysisResult?>(null) }
+    
+    // 분석 시뮬레이션 (실제로는 서버 API 호출)
+    LaunchedEffect(message) {
+        delay(2000) // 2초 로딩 시뮬레이션
+        // TODO: 실제로는 서버 API 호출
+        analysisResult = AnalysisResult(
+            isSmishing = false,
+            confidence = "높아요",
+            sender = "KB국민카드 공식 번호 확인됨",
+            content = "개인정보 요구-위험 문구 없음",
+            links = "KB국민카드 공식 도메인 검증 완료",
+            category = "합법적인 광고/홍보성 문자로 분류되었습니다."
+        )
+        isAnalyzing = false
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1E1E1E))
+    ) {
+        // 상단 바
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .align(Alignment.TopCenter),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    painter = painterResource(id = R.drawable.back),
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "메시지 분석",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            
+            Spacer(modifier = Modifier.size(48.dp))
+        }
+        
+        // 메인 콘텐츠 - 스크롤 가능
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 80.dp, start = 20.dp, end = 20.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // 메시지 말풍선
+            MessageBubble(message = message)
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // 분석 중 또는 결과 표시
+            if (isAnalyzing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF4A9FF5),
+                            modifier = Modifier.size(50.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "메시지 분석 중...",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            } else {
+                analysisResult?.let { result ->
+                    AnalysisResultCard(result = result)
+                }
+            }
+            
+        Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+fun MessageBubble(message: String) {
+    // 사용자가 보낸 메시지 - 오른쪽 정렬
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    color = Color(0xFF4A9FF5),
+                    shape = RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 4.dp
+                    )
+                )
+                .padding(16.dp)
+                .widthIn(max = 280.dp)
+        ) {
+            Text(
+                text = message,
+                color = Color.White,
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun AnalysisResultCard(result: AnalysisResult) {
+    // 시스템 응답 - 왼쪽 정렬
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 320.dp)
+                .background(
+                    color = Color(0xFF2A2A2A),
+                    shape = RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 16.dp
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            // 체크 아이콘과 결과 텍스트
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = if (result.isSmishing) R.drawable.forward else R.drawable.forward),
+                    contentDescription = null,
+                    tint = if (result.isSmishing) Color(0xFFFF6B6B) else Color(0xFF4A9FF5),
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = if (result.isSmishing) "위험" else "정상",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (result.isSmishing) Color(0xFFFF6B6B) else Color(0xFF4A9FF5)
+                )
+            }
+            
+            // 메인 메시지
+            Text(
+                text = if (result.isSmishing) 
+                    "스미싱일 가능성이 ${result.confidence}" 
+                else 
+                    "스미싱이 아닐 가능성이 ${result.confidence}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Text(
+                text = if (result.isSmishing) 
+                    "이 문자는 스미싱입니다." 
+                else 
+                    "이 문자는 스미싱이 아닙니다.",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 20.dp)
+            )
+            
+            // 세부 정보
+            result.sender?.let {
+                DetailRow(label = "발신자:", value = it)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
+            result.content?.let {
+                DetailRow(label = "내용:", value = it)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
+            result.links?.let {
+                DetailRow(label = "링크:", value = it)
+            }
+            
+            // 분류 결과
+            result.category?.let {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.forward),
+                        contentDescription = null,
+                        tint = Color(0xFF4A9FF5),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = it,
+                        fontSize = 13.sp,
+                        color = Color.White,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailRow(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            color = Color.White,
+            lineHeight = 20.sp
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     IACE2_FrontendTheme {
-        HomeScreen(onLoginClick = {}, onSettingsClick = {})
+        HomeScreen(
+            isLoggedIn = false,
+            userName = null,
+            onLoginClick = {},
+            onSettingsClick = {},
+            onAnalyzeMessage = {}
+        )
     }
 }
 
@@ -614,7 +1023,7 @@ fun HomeScreenPreview() {
 @Composable
 fun LoginScreenPreview() {
     IACE2_FrontendTheme {
-        LoginScreen(onBackClick = {})
+        LoginScreen(onBackClick = {}, onLoginSuccess = {})
     }
 }
 
