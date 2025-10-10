@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
                         onBackClick = { showSettings = false }
                     )
                     showAnalysis && messageToAnalyze != null -> AnalysisScreen(
-                        message = messageToAnalyze!!,
+                        initialMessage = messageToAnalyze!!,
                         onBackClick = { 
                             showAnalysis = false
                             messageToAnalyze = null
