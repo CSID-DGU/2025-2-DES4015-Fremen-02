@@ -15,3 +15,6 @@ spring:
       enabled: true
       force: true
       charset: UTF-8
+
+server:
+  forward-headers-strategy: framework

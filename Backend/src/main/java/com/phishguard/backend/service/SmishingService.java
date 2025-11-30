@@ -56,11 +56,27 @@ public class SmishingService {
             aiRequest.put("text", requestDto.getContent());
 
             aiResult = webClient.post()
-                    .uri("/predict") // 파이썬 서버의 엔드포인트 (AI팀과 맞춰야 함!)
+                    .uri("/api/v1/smishing-rag")
                     .bodyValue(aiRequest)
                     .retrieve()
                     .bodyToMono(AiResultDto.class) // 응답을 이 객체로 변환
                     .block(); // 결과 올 때까지 기다림 (Sync)
+
+            if (aiResult != null) {
+                // 점수가 0.5점(50%) 이상이면 위험으로 판단 (기준은 마음대로 조정)
+                double score = aiResult.getRiskScore();
+
+                if (score >= 0.8) {
+                    aiResult.setDanger(true);
+                    aiResult.setRiskLevel("CRITICAL");
+                } else if (score >= 0.5) {
+                    aiResult.setDanger(true);
+                    aiResult.setRiskLevel("CAUTION");
+                } else {
+                    aiResult.setDanger(false);
+                    aiResult.setRiskLevel("SAFE");
+                }
+            }
 
         } catch (Exception e) {
             log.error("AI 서버 통신 오류: {}", e.getMessage());
@@ -70,13 +86,18 @@ public class SmishingService {
 
         // 4. AI 분석 결과를 아까 저장한 로그에 업데이트
         if (aiResult != null) {
+
+            double rawScore = aiResult.getRiskScore();
+            aiResult.setRiskScore(rawScore * 100);
+
             smsLog.updateAiResult(
                     aiResult.isDanger(),
                     aiResult.getRiskLevel(),
-                    aiResult.getRiskScore(),
+                    (int) (rawScore * 100),
                     aiResult.getCategory(),
                     aiResult.getReason()
             );
+            smsLogRepository.save(smsLog);
         }
 
         return aiResult;

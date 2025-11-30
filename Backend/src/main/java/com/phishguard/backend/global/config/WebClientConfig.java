@@ -18,19 +18,19 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class WebClientConfig {
 
-    // application.yml에서 AI 서버 주소를 가져옵니다 (기본값: 로컬 파이썬 서버)
-    // 나중에 바꾸기 !!
-    @Value("${ai.server.url:http://localhost:8000}")
+    // ngrok 주소 (터미널에서 직접 입력하는게 더 나음)
+    // 예비용
+    @Value("${ai.server.url}")
     private String aiServerUrl;
 
     @Bean
     public WebClient webClient() {
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000) // 연결 타임아웃 (10초)
-                .responseTimeout(Duration.ofSeconds(30))             // 응답 타임아웃 (30초) - AI 생성 시간 고려
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000) // 연결 타임아웃 (10초)
+                .responseTimeout(Duration.ofMinutes(5))             // 응답 타임아웃 (30초) - AI 생성 시간 고려
                 .doOnConnected(conn ->
-                        conn.addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
-                                .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS)));
+                        conn.addHandlerLast(new ReadTimeoutHandler(300, TimeUnit.SECONDS))
+                                .addHandlerLast(new WriteTimeoutHandler(300, TimeUnit.SECONDS)));
 
         return WebClient.builder()
                 .baseUrl(aiServerUrl)
