@@ -1,5 +1,6 @@
 package com.phishguard.backend.domain;
 
+import com.phishguard.backend.global.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // 기본 생성자 막기 (안전성 UP)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Device extends BaseTimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
