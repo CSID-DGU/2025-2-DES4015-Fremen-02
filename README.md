@@ -1,7 +1,8 @@
 # 2025-2-DES4015-Fremen-02
+
 지산학캡스톤디자인2 Fremen팀 레포지토리입니다.
-----
-## Git 협업 전략
+<br>
+## 🙏🏻 Git 협업 전략
 **Commit Convention**
 
 | Commit Type | Description |
@@ -24,7 +25,7 @@
 | ♻️ Refactoring | `:recycle` | 코드 리팩토링 |
 | 📘 Docs | `:blue_book` | Feature 이외에 문서 생성 및 수정 |
 
-**협업 전략**
+**협업 전략 !필독!**
 
 **Git-flow 전략**
 
