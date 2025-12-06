@@ -307,7 +307,7 @@ GitHub 저장소: [https://github.com/CSID-DGU/2025-2-DES4015-Fremen-02](https:/
 
 ---
 
-# 🚀 향후 개발 로드맵 (Roadmap)
+# 🚀 향후 개발 로드맵
 
 * [ ] iOS 버전 개발
 * [ ] LLM 모델 온디바이스 경량화
@@ -317,9 +317,11 @@ GitHub 저장소: [https://github.com/CSID-DGU/2025-2-DES4015-Fremen-02](https:/
 
 ---
 
-<br>
 # 🙏🏻 Git 협업 전략
-**Commit Convention**
+> 본 프로젝트의 Git 협업 컨밴션은 다음과 같습니다.
+
+
+### Commit Convention
 
 | Commit Type | Description |
 | --- | --- |
@@ -330,7 +332,7 @@ GitHub 저장소: [https://github.com/CSID-DGU/2025-2-DES4015-Fremen-02](https:/
 | Design | CSS 등 사용자 UI 변경 |
 | Test | 로직 및 코드 테스트 |
 
-**PR Convention**
+### PR Convention
 
 | Icon | 사용법 | Description |
 | --- | --- | --- |
@@ -341,7 +343,7 @@ GitHub 저장소: [https://github.com/CSID-DGU/2025-2-DES4015-Fremen-02](https:/
 | ♻️ Refactoring | `:recycle` | 코드 리팩토링 |
 | 📘 Docs | `:blue_book` | Feature 이외에 문서 생성 및 수정 |
 
-**협업 전략 !필독!**
+### 협업 전략 
 
 **Git-flow 전략**
 
