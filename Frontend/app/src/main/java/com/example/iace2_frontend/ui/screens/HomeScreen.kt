@@ -4,10 +4,19 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.iace2_frontend.R
 import com.example.iace2_frontend.ui.theme.IACE2_FrontendTheme
+import com.example.iace2_frontend.util.RecentNotificationManager
+import com.example.iace2_frontend.util.TestUtil
 
 /**
  * 홈 화면
@@ -34,6 +45,7 @@ import com.example.iace2_frontend.ui.theme.IACE2_FrontendTheme
  * @param onLoginClick 로그인 버튼 클릭 시 콜백
  * @param onSettingsClick 설정 버튼 클릭 시 콜백
  * @param onAnalyzeMessage 클립보드 텍스트 분석 시 콜백
+ * @param onViewRecentNotification 최근 알림 보기 클릭 시 콜백
  */
 @Composable
 fun HomeScreen(
@@ -41,14 +53,30 @@ fun HomeScreen(
     userName: String?,
     onLoginClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAnalyzeMessage: (String) -> Unit
+    onAnalyzeMessage: (String) -> Unit,
+    onViewRecentNotification: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val coroutineScope = rememberCoroutineScope()
+    
+    // 문자수신 메뉴 상태 (메인 Box에서 관리)
+    var showSmsMenu by remember { mutableStateOf(false) }
+    var isRequesting by remember { mutableStateOf(false) }
     
     // 클립보드에 텍스트가 있는지 확인
     val hasClipboardText = clipboardManager.hasPrimaryClip() && 
                           clipboardManager.primaryClipDescription?.hasMimeType("text/plain") == true
+    
+    // 최근 알림이 있는지 확인
+    val hasRecentNotification = remember { 
+        mutableStateOf(RecentNotificationManager.hasRecentNotification(context)) 
+    }
+    
+    // 최근 알림 상태 업데이트
+    LaunchedEffect(Unit) {
+        hasRecentNotification.value = RecentNotificationManager.hasRecentNotification(context)
+    }
     
     // 클립보드에서 텍스트 가져오기 함수
     fun pasteFromClipboard() {
@@ -112,6 +140,94 @@ fun HomeScreen(
                         contentDescription = "Settings",
                         tint = Color.Gray
                     )
+                }
+                
+                // 문자수신 버튼 (로컬 테스트용)
+                TextButton(
+                    onClick = { if (!isRequesting) showSmsMenu = !showSmsMenu },
+                    enabled = !isRequesting
+                ) {
+                    Text(
+                        text = if (isRequesting) "분석중" else "문자수신",
+                        color = if (isRequesting) Color.Gray else Color(0xFF4A9FF5),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+        
+        // 드롭다운 메뉴 오버레이 (메뉴가 열려있을 때만 표시)
+        if (showSmsMenu && !isRequesting) {
+            // 배경 클릭 시 메뉴 닫기 (투명)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Transparent)
+                    .clickable { showSmsMenu = false }
+            )
+            
+            // 드롭다운 메뉴 (오른쪽 상단에 고정)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-16).dp, y = 56.dp)
+                    .background(
+                        color = Color(0xFF2A2A2A),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)
+                    .width(120.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        if (!isRequesting) {
+                            isRequesting = true
+                            showSmsMenu = false
+                            TestUtil.testDangerMessage(context)
+                            // 5초 후 플래그 리셋
+                            coroutineScope.launch {
+                                delay(5000)
+                                isRequesting = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("위험 문자", color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                }
+                TextButton(
+                    onClick = {
+                        if (!isRequesting) {
+                            isRequesting = true
+                            showSmsMenu = false
+                            TestUtil.testWarningMessage(context)
+                            // 5초 후 플래그 리셋
+                            coroutineScope.launch {
+                                delay(5000)
+                                isRequesting = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("경고 문자", color = Color(0xFFFFA726), fontSize = 12.sp)
+                }
+                TextButton(
+                    onClick = {
+                        if (!isRequesting) {
+                            isRequesting = true
+                            showSmsMenu = false
+                            TestUtil.testNormalMessage(context)
+                            // 5초 후 플래그 리셋
+                            coroutineScope.launch {
+                                delay(5000)
+                                isRequesting = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("안전 문자", color = Color(0xFF4A9FF5), fontSize = 12.sp)
                 }
             }
         }
@@ -225,55 +341,86 @@ fun HomeScreen(
             }
         }
 
-        // 버튼 - 클립보드 상태에 따라 다르게 표시
-        Button(
-            onClick = {
-                if (hasClipboardText) {
-                    pasteFromClipboard()
-                } else {
-                    // TODO: 메세지함으로 이동
-                }
-            },
+        // 버튼들 - 세로로 배치 (일정한 간격 유지)
+        Column(
             modifier = Modifier
-                .width(if (hasClipboardText) 150.dp else 175.dp)
-                .height(38.dp)
                 .align(Alignment.Center)
-                .offset(y = -100.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4A9FF5)
-            ),
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                .offset(y = -60.dp), // 버튼을 아래로 이동
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp) // 간격을 12dp에서 16dp로 증가
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            // 메시지 붙여넣기 버튼 (항상 표시, 분석 화면으로 이동)
+            Button(
+                onClick = {
+                    if (hasClipboardText) {
+                        // 클립보드에 텍스트가 있으면 바로 분석
+                        pasteFromClipboard()
+                    } else {
+                        // 클립보드에 텍스트가 없어도 분석 화면으로 이동 (빈 메시지로)
+                        onAnalyzeMessage("")
+                    }
+                },
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(38.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4A9FF5)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                if (hasClipboardText) {
-                    // 클립보드에 텍스트가 있을 때 - paste 아이콘
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Icon(
                         painter = painterResource(id = R.drawable.paste),
                         contentDescription = null,
                         tint = Color.Black,
                         modifier = Modifier.size(24.dp)
                     )
-                } else {
-                    // 클립보드가 비어있을 때 - forward 아이콘
-                    Icon(
-                        painter = painterResource(id = R.drawable.forward),
-                        contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.size(24.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "메세지 붙여넣기",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black
                     )
                 }
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (hasClipboardText) "메세지 붙여넣기" else "메세지함 바로가기",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
-                )
             }
+
+            // 최근 알림 보기 버튼 (항상 표시)
+            Button(
+                onClick = onViewRecentNotification,
+                modifier = Modifier
+                    .width(175.dp)
+                    .height(38.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2A2A2A)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.notifications),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "최근 알림 보기",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
+
         }
 
         // 하단 네비게이션 바
@@ -345,7 +492,8 @@ fun HomeScreenPreview() {
             userName = null,
             onLoginClick = {},
             onSettingsClick = {},
-            onAnalyzeMessage = {}
+            onAnalyzeMessage = {},
+            onViewRecentNotification = {}
         )
     }
 }
@@ -359,7 +507,8 @@ fun HomeScreenLoggedInPreview() {
             userName = "조효동님",
             onLoginClick = {},
             onSettingsClick = {},
-            onAnalyzeMessage = {}
+            onAnalyzeMessage = {},
+            onViewRecentNotification = {}
         )
     }
 }

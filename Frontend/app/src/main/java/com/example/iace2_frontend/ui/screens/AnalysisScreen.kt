@@ -24,6 +24,7 @@ import com.example.iace2_frontend.R
 import com.example.iace2_frontend.data.models.AnalysisResult
 import com.example.iace2_frontend.data.models.MessageAnalysis
 import com.example.iace2_frontend.data.models.RiskLevel
+import com.example.iace2_frontend.data.repository.AnalysisRepository
 import com.example.iace2_frontend.ui.theme.IACE2_FrontendTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ fun AnalysisScreen(initialMessage: String, onBackClick: () -> Unit) {
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val analysisRepository = remember { AnalysisRepository() }
     
     // 메시지 리스트 관리
     var messageList by remember { 
@@ -56,24 +58,41 @@ fun AnalysisScreen(initialMessage: String, onBackClick: () -> Unit) {
         )
     }
     
-    // 초기 메시지 분석
+    // 초기 메시지 분석 (실제 API 호출)
     LaunchedEffect(Unit) {
-        delay(2000)
-        messageList = messageList.map { item ->
-            if (item.id == messageList.first().id) {
-                item.copy(
-                    isAnalyzing = false,
-                    result = AnalysisResult(
-                        riskLevel = RiskLevel.NORMAL, // 정상
-                        isSmishing = false,
-                        confidence = "높아요",
-                        sender = "KB국민카드 공식 번호 확인됨",
-                        content = "개인정보 요구-위험 문구 없음",
-                        links = "KB국민카드 공식 도메인 검증 완료",
-                        category = "합법적인 광고/홍보성 문자로 분류되었습니다."
-                    )
-                )
-            } else item
+        val firstMessage = messageList.first()
+        coroutineScope.launch {
+            val result = analysisRepository.analyzeMessage(context, firstMessage.message)
+            result.fold(
+                onSuccess = { analysisResult ->
+                    messageList = messageList.map { item ->
+                        if (item.id == firstMessage.id) {
+                            item.copy(
+                                isAnalyzing = false,
+                                result = analysisResult
+                            )
+                        } else item
+                    }
+                },
+                onFailure = { exception ->
+                    // 에러 발생 시 에러 상태로 표시
+                    messageList = messageList.map { item ->
+                        if (item.id == firstMessage.id) {
+                            item.copy(
+                                isAnalyzing = false,
+                                result = AnalysisResult(
+                                    riskLevel = RiskLevel.WARN,
+                                    isDanger = false,
+                                    confidence = "알 수 없음",
+                                    sender = "분석 실패",
+                                    content = "네트워크 오류: ${exception.message}",
+                                    category = "분석 중 오류가 발생했습니다. 다시 시도해주세요."
+                                )
+                            )
+                        } else item
+                    }
+                }
+            )
         }
     }
     
@@ -92,47 +111,39 @@ fun AnalysisScreen(initialMessage: String, onBackClick: () -> Unit) {
             listState.animateScrollToItem(messageList.size - 1)
         }
         
-        // 분석 시뮬레이션 (랜덤으로 다양한 결과 생성)
+        // 실제 API 호출로 분석
         coroutineScope.launch {
-            delay(2000)
-            val randomResult = when ((0..2).random()) {
-                0 -> AnalysisResult(
-                    riskLevel = RiskLevel.NORMAL,
-                    isSmishing = false,
-                    confidence = "높아요",
-                    sender = "공식 번호 확인됨",
-                    content = "개인정보 요구-위험 문구 없음",
-                    links = "공식 도메인 검증 완료",
-                    category = "합법적인 광고/홍보성 문자로 분류되었습니다."
-                )
-                1 -> AnalysisResult(
-                    riskLevel = RiskLevel.WARN,
-                    isSmishing = false,
-                    confidence = "보통",
-                    sender = "번호 정보 확인 필요",
-                    content = "일부 의심스러운 문구 포함",
-                    links = "링크 주의 필요",
-                    category = "주의가 필요한 메시지입니다. 링크 클릭에 유의하세요."
-                )
-                else -> AnalysisResult(
-                    riskLevel = RiskLevel.DANGER,
-                    isSmishing = true,
-                    confidence = "매우 높아요",
-                    sender = "미확인 발신번호",
-                    content = "개인정보 및 금융정보 요구 확인",
-                    links = "의심스러운 도메인 감지",
-                    category = "스미싱 위험 문자로 분류되었습니다. 절대 링크를 클릭하지 마세요!"
-                )
-            }
-            
-            messageList = messageList.map { item ->
-                if (item.id == newMessage.id) {
-                    item.copy(
-                        isAnalyzing = false,
-                        result = randomResult
-                    )
-                } else item
-            }
+            val result = analysisRepository.analyzeMessage(context, message)
+            result.fold(
+                onSuccess = { analysisResult ->
+                    messageList = messageList.map { item ->
+                        if (item.id == newMessage.id) {
+                            item.copy(
+                                isAnalyzing = false,
+                                result = analysisResult
+                            )
+                        } else item
+                    }
+                },
+                onFailure = { exception ->
+                    // 에러 발생 시 에러 상태로 표시
+                    messageList = messageList.map { item ->
+                        if (item.id == newMessage.id) {
+                            item.copy(
+                                isAnalyzing = false,
+                                result = AnalysisResult(
+                                    riskLevel = RiskLevel.WARN,
+                                    isDanger = false,
+                                    confidence = "알 수 없음",
+                                    sender = "분석 실패",
+                                    content = "네트워크 오류: ${exception.message}",
+                                    category = "분석 중 오류가 발생했습니다. 다시 시도해주세요."
+                                )
+                            )
+                        } else item
+                    }
+                }
+            )
         }
     }
     
@@ -475,29 +486,115 @@ fun AnalysisResultCard(result: AnalysisResult) {
             result.links?.let {
                 DetailRow(label = "링크:", value = it)
             }
-            
-            // 분류 결과
-            result.category?.let {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.forward),
-                        contentDescription = null,
-                        tint = Color(0xFF4A9FF5),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = it,
-                        fontSize = 13.sp,
-                        color = Color.White,
-                        lineHeight = 18.sp
-                    )
-                }
+
+
+
+            // 판단 근거 & 후속 조치 텍스트
+            val (reasonText, actionText) = when (result.riskLevel) {
+                RiskLevel.DANGER -> Pair(
+                    "메시지에 도박·사기성 키워드, 과도한 혜택(예: 100% 보장), " +
+                            "의심스러운 링크 주소 등이 함께 포함되어 있어 관련 법령과 금융 보안 지침상 " +
+                            "스미싱 문자일 가능성이 매우 높은 패턴으로 판단됩니다.",
+                    "문자에 포함된 링크를 절대 누르지 말고, 계좌번호·비밀번호·인증번호 등 어떤 정보도 입력하지 마세요. " +
+                            "이미 클릭했다면 금융기관 공식 앱이나 홈페이지를 통해 즉시 비밀번호를 변경하고, " +
+                            "해당 기관 고객센터나 금융감독원(국번 없이 1332), 한국인터넷진흥원(118) 등 공식 채널로 " +
+                            "사실 여부를 문의하는 것을 권장드립니다."
+                )
+
+                RiskLevel.WARN -> Pair(
+                    "홍보·안내 문자로도 보이지만, 계좌 확인을 요청하거나 링크 접속을 유도하는 등 일부 내용이 " +
+                            "의심스러운 표현을 포함하고 있어 주의가 필요한 메시지로 판단됩니다.",
+                    "발신자가 신뢰할 만한 번호인지 다시 한 번 확인하시고, 문자에 포함된 링크보다는 " +
+                            "직접 해당 기관의 공식 앱 또는 홈페이지에 접속해 내용을 확인하는 것이 안전합니다. " +
+                            "조금이라도 이상하다고 느껴지면 문자에 답장하거나 링크를 누르지 말고, " +
+                            "공식 고객센터로 직접 문의해 주세요."
+                )
+
+                RiskLevel.NORMAL -> Pair(
+                    "개인정보나 금융정보 입력을 요구하는 문장, 계좌 확인·송금 요청, " +
+                            "의심스러운 링크 등 스미싱에서 자주 보이는 요소가 확인되지 않았으며, " +
+                            "일반적인 안내·홍보 목적의 내용으로 판단되었습니다.",
+                    "이 문자는 스미싱 가능성이 낮지만, 금융 거래와 관련된 중요한 내용은 " +
+                            "항상 공식 앱이나 홈페이지, 고객센터를 통해 한 번 더 확인하는 습관을 가지면 " +
+                            "더 안전하게 이용하실 수 있습니다."
+                )
             }
+
+            // 판단 근거
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "판단 근거",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = reasonText,
+                fontSize = 13.sp,
+                color = Color.White,
+                lineHeight = 18.sp
+            )
+
+            // 추가 AI 설명(result.reason)이 있으면 아래에 붙여서 표시
+            result.reason?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "· AI 분석 참고: $it",
+                    fontSize = 12.sp,
+                    color = Color(0xFFB0C4FF),
+                    lineHeight = 18.sp
+                )
+            }
+
+            // 후속 조치
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "후속 조치",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = actionText,
+                fontSize = 13.sp,
+                color = Color.White,
+                lineHeight = 18.sp
+            )
+
+            // 위험 점수 표시 (risk_score가 있는 경우)
+            result.riskScore?.let { score ->
+                Spacer(modifier = Modifier.height(16.dp))
+                DetailRow(
+                    label = "위험 점수:",
+                    value = "$score/100"
+                )
+            }
+
+            // 카테고리 표시 (category가 있는 경우)
+            result.category?.let { category ->
+                Spacer(modifier = Modifier.height(12.dp))
+                DetailRow(
+                    label = "분류:",
+                    value = getCategoryKorean(category)
+                )
+            }
+
         }
+    }
+}
+
+/**
+ * 카테고리를 한국어로 변환
+ */
+private fun getCategoryKorean(category: String): String {
+    return when (category.uppercase()) {
+        "GAMBLING" -> "도박"
+        "IMPERSONATION" -> "사칭"
+        "NORMAL" -> "정상"
+        "SMISHING" -> "스미싱"
+        else -> category // 알 수 없는 카테고리는 그대로 표시
     }
 }
 
@@ -567,12 +664,13 @@ fun AnalysisResultCardNormalPreview() {
             AnalysisResultCard(
                 result = AnalysisResult(
                     riskLevel = RiskLevel.NORMAL,
-                    isSmishing = false,
+                    isDanger = false,
+                    riskScore = 15,
+                    category = "NORMAL",
+                    reason = "합법적인 광고/홍보성 문자로 분류되었습니다.",
                     confidence = "높아요",
                     sender = "KB국민카드 공식 번호 확인됨",
-                    content = "개인정보 요구-위험 문구 없음",
-                    links = "KB국민카드 공식 도메인 검증 완료",
-                    category = "합법적인 광고/홍보성 문자로 분류되었습니다."
+                    content = "개인정보 요구-위험 문구 없음"
                 )
             )
         }
@@ -592,12 +690,13 @@ fun AnalysisResultCardWarnPreview() {
             AnalysisResultCard(
                 result = AnalysisResult(
                     riskLevel = RiskLevel.WARN,
-                    isSmishing = false,
+                    isDanger = true,
+                    riskScore = 65,
+                    category = "IMPERSONATION",
+                    reason = "주의가 필요한 메시지입니다. 링크 클릭에 유의하세요.",
                     confidence = "보통",
                     sender = "번호 정보 확인 필요",
-                    content = "일부 의심스러운 문구 포함",
-                    links = "링크 주의 필요",
-                    category = "주의가 필요한 메시지입니다. 링크 클릭에 유의하세요."
+                    content = "일부 의심스러운 문구 포함"
                 )
             )
         }
@@ -617,12 +716,13 @@ fun AnalysisResultCardDangerPreview() {
             AnalysisResultCard(
                 result = AnalysisResult(
                     riskLevel = RiskLevel.DANGER,
-                    isSmishing = true,
+                    isDanger = true,
+                    riskScore = 97,
+                    category = "GAMBLING",
+                    reason = "도박 키워드 + 과장문구(100% 보장) + 고위험 도메인(.xyz) 패턴 감지",
                     confidence = "매우 높아요",
                     sender = "미확인 발신번호",
-                    content = "개인정보 및 금융정보 요구 확인",
-                    links = "의심스러운 도메인 감지",
-                    category = "스미싱 위험 문자로 분류되었습니다. 절대 링크를 클릭하지 마세요!"
+                    content = "개인정보 및 금융정보 요구 확인"
                 )
             )
         }
