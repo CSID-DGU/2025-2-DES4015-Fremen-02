@@ -80,6 +80,44 @@ Fremen은 **On-Device AI + Server-Side AI + LLM·RAG 기반 근거 생성**을 �
 ```
 
 ---
+# 🎨 프로젝트 UI
+
+<table>
+  <tr>
+    <td align="center" width="300">
+      <img src="https://github.com/user-attachments/assets/002a2c14-074b-47e0-b23d-0090634315d1" width="250"><br>
+      <sub>스플래시 화면</sub>
+    </td>
+    <td align="center" width="300">
+      <img src="https://github.com/user-attachments/assets/eaeeb51f-afdd-41e9-8ad4-4ae50db9a2d5" width="250"><br>
+      <sub>메인 화면 1</sub>
+    </td>
+    <td align="center" width="300">
+      <img width="250"  alt="image" src="https://github.com/user-attachments/assets/17b4aa18-33ab-4cf6-a6f9-160a4c8a63de" /><br>
+      <sub>메인 화면 2</sub>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center" width="300">
+      <img src="https://github.com/user-attachments/assets/096a29bb-50c9-4bc1-b449-1cf19e6673aa" width="250"><br>
+      <sub>정상 메시지</sub>
+    </td>
+    <td align="center" width="300">
+      <img src="https://github.com/user-attachments/assets/bfa5cabb-5e23-4200-80a6-3477c681d3b9" width="250"><br>
+      <sub>의심 메시지</sub>
+    </td>
+    <td align="center" width="300">
+      <img src="https://github.com/user-attachments/assets/7a9929f5-986a-4aba-99d5-fa885db1fdb5" width="250"><br>
+      <sub>위험 메시지</sub>
+    </td>
+  </tr>
+</table>
+
+
+---
 
 # 📦 설치 및 실행 방법 (Installation)
 
