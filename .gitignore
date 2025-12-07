@@ -1,0 +1,133 @@
+# -----------------------------
+# Python Cache / Bytecode
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# -----------------------------
+# Virtual Environment
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+docs/
+.ai-venv/
+pip-wheel-metadata/
+
+# -----------------------------
+# OS / System Files
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# IDE / Editor configs
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+
+# -----------------------------
+# Logs / Runtime
+# -----------------------------
+*.log
+logs/
+*.out
+*.err
+
+# -----------------------------
+# Jupyter Notebook
+# -----------------------------
+.ipynb_checkpoints/
+*.ipynb_convert/
+.jupyter/
+
+# -----------------------------
+# AI / ML Model Files (필수!!)
+# -----------------------------
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+*.h5
+*.tflite
+*.pb
+*.mlmodel
+
+# 모델 디렉토리 자체 제외 (kobert, LLM 등)
+AI/models/
+models/
+checkpoint/
+checkpoints/
+outputs/
+runs/
+artifacts/
+
+# Huggingface cache
+huggingface/
+huggingface_cache/
+~/.cache/huggingface/
+transformers_cache/
+
+# -----------------------------
+# Dataset / Training Files
+# -----------------------------
+data/
+dataset/
+datasets/
+*.csv
+*.tsv
+*.jsonl
+*.pickle
+*.pkl
+*.npy
+*.npz
+*.parquet
+*.zip
+*.tar
+*.gz
+
+# -----------------------------
+# Tokenizers / SentencePiece
+# -----------------------------
+*.model
+*.vocab
+*.spm
+*.sentencepiece
+
+# -----------------------------
+# PyTorch / TensorFlow cache
+# -----------------------------
+torch_cache/
+torch_cache/*
+tf_cache/
+tf_cache/*
+
+# -----------------------------
+# Build / Packaging
+# -----------------------------
+build/
+dist/
+*.egg-info/
+*.egg
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+.env
+.env.*
+*.secret
+*.key
+*.pem
+*.token
+
+# -----------------------------
+# FastAPI / Uvicorn Temp
+# -----------------------------
+*.pid
+*.db.sqlite3
